@@ -85,5 +85,5 @@ test "push operations" {
     defer test_array.deinit();
 
     try test_array.push(2);
-    try testing.expect(test_array.get(0) == 3);
+    try testing.expect(test_array.get(0) == 2);
 }
