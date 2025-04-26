@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const GROWTH_FACTOR: f32 = 2.0;
+const GROWTH_FACTOR: f32 = 1.5;
 
 pub fn array(comptime T: type) type {
     return struct {
@@ -53,7 +53,7 @@ pub fn array(comptime T: type) type {
         }
 
         fn calculate_new_capacity(old_capacity: usize) usize {
-            return @as(usize, @intFromFloat(@floor(@as(f32, @floatFromInt(old_capacity)) * GROWTH_FACTOR)));
+            return @as(usize, @intFromFloat(@ceil(@as(f32, @floatFromInt(old_capacity)) * GROWTH_FACTOR)));
         }
 
         pub fn get(self: *Self, index: usize) ?T {
