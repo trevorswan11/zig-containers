@@ -26,6 +26,7 @@ pub fn build(b: *std.Build) void {
     installLib(b, lib_mod, exe_mod);
     addRunStep(b, installExe(b, exe_mod));
     addTestStep(b, lib_mod, exe_mod);
+    addFmtStep(b);
 }
 
 fn installLib(b: *std.Build, lib_mod: *std.Build.Module, exe_mod: *std.Build.Module) void {
@@ -85,6 +86,16 @@ fn addExeTestStep(b: *std.Build, exe_mod: *std.Build.Module, test_step: *std.Bui
     });
     const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
     test_step.dependOn(&run_exe_unit_tests.step);
+}
+
+/// Adds a step to format all code using the zig compiler's formatter
+fn addFmtStep(b: *std.Build) void {
+    const lint = b.addSystemCommand(&[_][]const u8{
+        "zig", "fmt", "src\\",
+    });
+
+    const step = b.step("lint", "Check formatting of Zig source files");
+    step.dependOn(&lint.step);
 }
 
 /// Adds all other source files to the test step. This can increase the compile time when running 
