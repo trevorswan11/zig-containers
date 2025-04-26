@@ -7,18 +7,27 @@ const PROJECT_NAME: []const u8 = "zig_containers";
 /// By convention, this name should be snake case
 const LIB_IMPORT_NAME: []const u8 = "zig_containers_lib";
 
+/// The name of the entry point to the executable
+const EXE_ENTRY_POINT: []const u8 = "main.zig";
+
+/// The name of the entry point to the executable
+const LIB_ENTRY_POINT: []const u8 = "root.zig";
+
+/// The directory where all source files are located
+const SOURCE_DIRECTORY: []const u8 = "src";
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
     const lib_mod = b.createModule(.{
-        .root_source_file = b.path("src/root.zig"),
+        .root_source_file = b.path(SOURCE_DIRECTORY++"/"++LIB_ENTRY_POINT),
         .target = target,
         .optimize = optimize,
     });
 
     const exe_mod = b.createModule(.{
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = b.path(SOURCE_DIRECTORY++"/"++EXE_ENTRY_POINT),
         .target = target,
         .optimize = optimize,
     });
@@ -91,7 +100,7 @@ fn addExeTestStep(b: *std.Build, exe_mod: *std.Build.Module, test_step: *std.Bui
 /// Adds a step to format all code using the zig compiler's formatter
 fn addFmtStep(b: *std.Build) void {
     const lint = b.addSystemCommand(&[_][]const u8{
-        "zig", "fmt", "src\\",
+        "zig", "fmt", SOURCE_DIRECTORY++"/",
     });
 
     const step = b.step("lint", "Check formatting of Zig source files");
@@ -102,7 +111,7 @@ fn addFmtStep(b: *std.Build) void {
 /// `zig build test`, but correctly allows all tests in the src directory to be executed correctly
 fn addSourceTests(b: *std.Build, test_step: *std.Build.Step) void {
     const gpa = std.heap.page_allocator;
-    const paths = getZigSourceFiles(gpa, "src") catch {
+    const paths = getZigSourceFiles(gpa, SOURCE_DIRECTORY) catch {
         std.debug.print("Failed to collect source files\n", .{});
         return;
     };
@@ -135,8 +144,8 @@ fn getZigSourceFiles(allocator: std.mem.Allocator, directory: []const u8) !std.A
     while (try walker.next()) |entry| {
         if (entry.kind != .file) continue;
         if (!std.mem.endsWith(u8, entry.basename, ".zig")) continue;
-        if (std.mem.eql(u8, entry.basename, "main.zig")) continue;
-        if (std.mem.eql(u8, entry.basename, "root.zig")) continue;
+        if (std.mem.eql(u8, entry.basename, EXE_ENTRY_POINT)) continue;
+        if (std.mem.eql(u8, entry.basename, LIB_ENTRY_POINT)) continue;
 
         const full_path = try std.fs.path.join(allocator, &.{ directory, entry.path });
         try paths.append(full_path);
