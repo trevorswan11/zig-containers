@@ -10,7 +10,7 @@ const LIB_IMPORT_NAME: []const u8 = "zig_containers_lib";
 /// The name of the entry point to the executable
 const EXE_ENTRY_POINT: []const u8 = "main.zig";
 
-/// The name of the entry point to the executable
+/// The name of the entry point to the library
 const LIB_ENTRY_POINT: []const u8 = "root.zig";
 
 /// The directory where all source files are located
