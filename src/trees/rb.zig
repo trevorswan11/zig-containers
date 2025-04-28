@@ -13,28 +13,22 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
     return struct {
         const Self = @This();
 
-        root: ?*Node = null,
-        nil: *Node,
-        min: ?*Node = null,
+        root: ?*RBNode = null,
+        nil: *RBNode,
+        min: ?*RBNode = null,
 
-        allocator: *std.mem.Allocator,
+        allocator: std.mem.Allocator,
 
-        pub const Node = struct {
+        pub const RBNode = struct {
             data: T,
             color: u8,
 
-            left: *Node,
-            right: *Node,
-            parent: *Node,
-
-            pub fn init(value: T) Node {
-                return Node{
-                    .data = value,
-                };
-            }
+            left: *RBNode,
+            right: *RBNode,
+            parent: *RBNode,
         };
 
-        fn first(self: *Self) ?*Node {
+        fn first(self: *Self) ?*RBNode {
             if (self.root) |r| {
                 return r.left;
             }
@@ -48,9 +42,9 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             return true;
         }
 
-        pub fn init(allocator: *std.mem.Allocator) !Self {
-            var nil_node = try allocator.create(Node);
-            nil_node.* = Node{
+        pub fn init(allocator: std.mem.Allocator) !Self {
+            var nil_node = try allocator.create(RBNode);
+            nil_node.* = RBNode{
                 .left = undefined,
                 .right = undefined,
                 .parent = undefined,
@@ -62,8 +56,17 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             nil_node.right = nil_node;
             nil_node.parent = nil_node;
 
+            const root_node = try allocator.create(RBNode);
+            root_node.* = RBNode{
+                .left = nil_node,
+                .right = nil_node,
+                .parent = nil_node,
+                .color = BLACK,
+                .data = undefined,
+            };
+
             return Self{
-                .root = null,
+                .root = root_node,
                 .nil = nil_node,
                 .min = null,
                 .allocator = allocator,
@@ -77,7 +80,7 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             self.root = null;
         }
 
-        fn deinitNode(self: *Self, node: ?*Node) void {
+        fn deinitNode(self: *Self, node: ?*RBNode) void {
             // perform a post-order traversal to safely free all nodes
             if (node) |n| {
                 if (n == self.nil) {
@@ -89,7 +92,7 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             }
         }
 
-        pub fn find(self: *Self, data: T) ?*Node {
+        pub fn find(self: *Self, data: T) ?*RBNode {
             var p = self.first();
             while (p) |ptr| {
                 if (ptr == self.nil) {
@@ -106,7 +109,7 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             return null;
         }
         
-        pub fn successor(self: *Self, node: *Node) *Node {
+        pub fn successor(self: *Self, node: *RBNode) *RBNode {
             if (node.right != self.nil) {
                 // Case 1: Go right once, then all the way left
                 var p = node.right;
@@ -126,7 +129,7 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
 
         pub fn apply(
             self: *Self,
-            node: *Node,
+            node: *RBNode,
             func: fn (data: *anyopaque, cookie: *anyopaque) anyerror!void,
             cookie: *anyopaque,
             order: TraversalOrder,
@@ -150,7 +153,7 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             }
         }
 
-        pub fn rotateLeft(self: *Self, x: *Node) void {
+        pub fn rotateLeft(self: *Self, x: *RBNode) void {
             var y = x.right;
             x.right = y.left;
             if (x.right != self.nil) {
@@ -168,7 +171,7 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             x.parent = y;
         }
 
-        pub fn rotateRight(self: *Self, x: *Node) void {
+        pub fn rotateRight(self: *Self, x: *RBNode) void {
             var y = x.left;
             x.left = y.right;
             if (x.left != self.nil) {
@@ -186,14 +189,123 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             x.parent = y;
         }
 
-        pub fn insert(self: *Self, data: T) ?*Node {
-            var current = self.first();
-            var parent = self.root.?;
+        pub fn insert(self: *Self, data: T) !?*RBNode {
+            if (self.find(data)) |_| {
+                @panic("Cannot insert duplicate value!");
+            }
 
-            while (current != self.nil) {
+            var current = self.first();
+            var parent = if (self.root == null) self.nil else self.root.?;
+
+            while (current != null) {
+                if (current.? == self.nil) {
+                    break;
+                }
                 
-            } 
+                if (current) |c| {
+                    parent = c;
+                    if (less(data, c.data)) {
+                        current.? = c.left;
+                    } else if (less(c.data, data)) {
+                        current.? = c.right;
+                    } else unreachable;
+                }
+            }
+
+            var real_current = try self.allocator.create(RBNode);
+            const new_node = real_current;
+
+            real_current.left = self.nil;
+            real_current.right = self.nil;
+            real_current.parent = parent;
+            real_current.color = RED;
+            real_current.data = data;
+
+            if (parent == self.nil or less(data, parent.data)) {
+                parent.left = real_current;
+            } else {
+                parent.right = real_current;
+            }
+
+            if (self.min == null or less(real_current.data, self.min.?.data)) {
+                self.min = real_current;
+            }
+            
+            // 
+            // insertion into a red-black tree:
+            // 0-children root cluster (parent node is BLACK) becomes 2-children root cluster (new root node)
+            //   paint root node BLACK, and done
+            // 2-children cluster (parent node is BLACK) becomes 3-children cluster
+            //   done
+            // 3-children cluster (parent node is BLACK) becomes 4-children cluster
+            //   done
+            // 3-children cluster (parent node is RED) becomes 4-children cluster
+            //   rotate, and done
+            // 4-children cluster (parent node is RED) splits into 2-children cluster and 3-children cluster
+            //   split, and insert grandparent node into parent cluster
+            // 
+            if (real_current.parent.color == RED) {
+                // insertion into 3-children cluster (parent node is RED)
+                // insertion into 4-children cluster (parent node is RED)
+                self.insertRepair(real_current);
+            } else {
+                // insertion into 0-children root cluster (parent node is BLACK)
+                // insertion into 2-children cluster (parent node is BLACK)
+                // insertion into 3-children cluster (parent node is BLACK)
+            }
+
+            // the root is always BLACK
+            self.first().?.color = BLACK;
+            return new_node;
         }
+
+        fn insertRepair(self: *Self, current_: *RBNode) void {
+            var current = current_;
+            var uncle: *RBNode = undefined;
+            while (current.parent.color == RED) {
+                if (current.parent == current.parent.parent.left) {
+                    uncle = current.parent.parent.right;
+                    if (uncle.color == RED) {
+                        // insertion into 4-children cluster
+                        current.parent.color = BLACK;
+                        uncle.color = BLACK;
+                        current = current.parent.parent;
+                        current.color = RED;
+                    } else {
+                        // insertion into 3-children cluster
+                        if (current == current.parent.right) {
+                            current = current.parent;
+                            self.rotateLeft(current);
+                        }
+
+                        current.parent.color = BLACK;
+                        current.parent.parent.color = RED;
+                        self.rotateRight(current.parent.parent);
+                    }
+                } else {
+                    uncle = current.parent.parent.left;
+                    if (uncle.color == RED) {
+                        // insertion into 4-children cluster
+                        current.parent.color = BLACK;
+                        uncle.color = BLACK;
+                        current = current.parent.parent;
+                        current.color = RED;
+                    } else {
+                        // insertion into 3-children cluster
+                        if (current == current.parent.left) {
+                            current = current.parent;
+                            self.rotateRight(current);
+                        }
+
+                        current.parent.color = BLACK;
+                        current.parent.parent.color = RED;
+                        self.rotateLeft(current.parent.parent);
+                    }
+                }
+            }
+        }
+
+
     };
 }
 
@@ -201,3 +313,13 @@ fn lessThanInt(a: i32, b: i32) bool {
     return a < b;
 }
 
+test "RBT (de)initialization and insertion" {
+    const allocator = std.heap.page_allocator;
+    var rbt = try RBTree(i32, lessThanInt).init(allocator);
+    defer rbt.deinit();
+
+    _ = try rbt.insert(1);
+    _ = try rbt.insert(2);
+    _ = try rbt.insert(3);
+    _ = try rbt.insert(6);
+}
