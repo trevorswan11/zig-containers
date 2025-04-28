@@ -3,7 +3,7 @@ const std = @import("std");
 const RED: u8 = 0;
 const BLACK: u8 = 1;
 
-const rbtraversal = enum {
+const TraversalOrder = enum {
     PREORDER,
     POSTORDER,
     INORDER,
@@ -23,9 +23,9 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             data: T,
             color: u8,
 
-            left: ?*Node,
-            right: ?*Node,
-            parent: ?*Node,
+            left: *Node,
+            right: *Node,
+            parent: *Node,
 
             pub fn init(value: T) Node {
                 return Node{
@@ -36,8 +36,9 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
 
         fn first(self: *Self) ?*Node {
             if (self.root) |r| {
-                return if (r.left != null) r.left else null;
+                return r.left;
             }
+            return null;
         }
 
         fn isEmpty(self: *Self) bool {
@@ -105,24 +106,93 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             return null;
         }
         
-        pub fn successor(self: *Self, node: *Node) ?*Node {
+        pub fn successor(self: *Self, node: *Node) *Node {
             if (node.right != self.nil) {
                 // Case 1: Go right once, then all the way left
                 var p = node.right;
-                while (p.?.left != self.nil) {
-                    p = p.?.left;
-                }
+                while (p.left != self.nil) : (p = p.left) {}
                 return p;
             } else {
                 // Case 2: Go up until we are no longer a right child
                 var p = node.parent;
                 var n = node;
-                while (p != null and n == p.?.right) {
-                    n = p.?;
-                    p = p.?.parent;
+                while (n == p.right) {
+                    n = p;
+                    p = p.parent;
                 }
                 return p;
             }
+        }
+
+        pub fn apply(
+            self: *Self,
+            node: *Node,
+            func: fn (data: *anyopaque, cookie: *anyopaque) anyerror!void,
+            cookie: *anyopaque,
+            order: TraversalOrder,
+        ) anyerror!void {
+            if (node == self.nil) {
+                return;
+            }
+
+            if (order == .Preorder) {
+                try func(node.data, cookie);
+            }
+            try self.apply(node.left, func, cookie, order);
+
+            if (order == .Inorder) {
+                try func(node.data, cookie);
+            }
+            try self.apply(node.right, func, cookie, order);
+
+            if (order == .Postorder) {
+                try func(node.data, cookie);
+            }
+        }
+
+        pub fn rotateLeft(self: *Self, x: *Node) void {
+            var y = x.right;
+            x.right = y.left;
+            if (x.right != self.nil) {
+                x.right.parent = x;
+            }
+
+            y.parent = x.parent;
+            if (x == x.parent.left) {
+                x.parent.left = y;
+            } else {
+                x.parent.right = y;
+            }
+
+            y.left = x;
+            x.parent = y;
+        }
+
+        pub fn rotateRight(self: *Self, x: *Node) void {
+            var y = x.left;
+            x.left = y.right;
+            if (x.left != self.nil) {
+                x.left.parent = x;
+            }
+
+            y.parent = x.parent;
+            if (x == x.parent.left) {
+                x.parent.left = y;
+            } else {
+                x.parent.right = y;
+            }
+
+            y.right = x;
+            x.parent = y;
+        }
+
+        pub fn insert(self: *Self, data: T) ?*Node {
+            var current = self.first();
+            var parent = self.root.?;
+
+            while (current != self.nil) {
+                
+            } 
         }
     };
 }

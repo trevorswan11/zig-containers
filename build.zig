@@ -36,6 +36,7 @@ pub fn build(b: *std.Build) void {
     addRunStep(b, installExe(b, exe_mod));
     addTestStep(b, lib_mod, exe_mod);
     addFmtStep(b);
+    addCompileCheckStep(b);
 }
 
 fn installLib(b: *std.Build, lib_mod: *std.Build.Module, exe_mod: *std.Build.Module) void {
@@ -107,6 +108,28 @@ fn addFmtStep(b: *std.Build) void {
     step.dependOn(&lint.step);
 }
 
+/// Adds a step to check for compile errors in all files (excluding main.zig and root.zig)
+fn addCompileCheckStep(b: *std.Build) void {
+    const gpa = std.heap.page_allocator;
+    const paths = getZigSourceFiles(gpa, SOURCE_DIRECTORY) catch {
+        std.debug.print("Failed to collect source files\n", .{});
+        return;
+    };
+
+    defer {
+        for (paths.items) |p| gpa.free(p);
+        paths.deinit();
+    }
+    
+    const step = b.step("compile", "Look for simple compile errors in source files");
+    for (paths.items) |p| {
+        const compile = b.addSystemCommand(&[_][]const u8 {
+            "zig", "ast-check", p
+        });
+        step.dependOn(&compile.step);
+    }
+}
+
 /// Adds all other source files to the test step. This can increase the compile time when running 
 /// `zig build test`, but correctly allows all tests in the src directory to be executed correctly
 fn addSourceTests(b: *std.Build, test_step: *std.Build.Step) void {
@@ -125,7 +148,6 @@ fn addSourceTests(b: *std.Build, test_step: *std.Build.Step) void {
         test_step.dependOn(&(b.addRunArtifact(b.addTest(.{
             .root_source_file = b.path(path),
         }))).step);
-        // std.debug.print("Found File: {s}\n", .{path});
     }
 }
 
