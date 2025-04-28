@@ -34,9 +34,9 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             }
         };
 
-        fn first(self: *Self) ?Node {
+        fn first(self: *Self) ?*Node {
             if (self.root) |r| {
-                return if (r.left.? != null) r.left else null;
+                return if (r.left != null) r.left else null;
             }
         }
 
@@ -48,15 +48,25 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
         }
 
         pub fn init(allocator: *std.mem.Allocator) !Self {
-            var rbt = try allocator.create(Self);
-            rbt.* = Self{
+            var nil_node = try allocator.create(Node);
+            nil_node.* = Node{
+                .left = undefined,
+                .right = undefined,
+                .parent = undefined,
+                .data = undefined,
+                .color = BLACK,
+            };
+
+            nil_node.left = nil_node;
+            nil_node.right = nil_node;
+            nil_node.parent = nil_node;
+
+            return Self{
                 .root = null,
-                .nil = try allocator.create(Node),
+                .nil = nil_node,
                 .min = null,
                 .allocator = allocator,
             };
-
-            rbt.nil.?
         }
 
         pub fn deinit(self: *Self) void {
@@ -69,9 +79,49 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
         fn deinitNode(self: *Self, node: ?*Node) void {
             // perform a post-order traversal to safely free all nodes
             if (node) |n| {
+                if (n == self.nil) {
+                    return;
+                }
                 self.deinitNode(n.left);
                 self.deinitNode(n.right);
                 self.allocator.destroy(n);
+            }
+        }
+
+        pub fn find(self: *Self, data: T) ?*Node {
+            var p = self.first();
+            while (p) |ptr| {
+                if (ptr == self.nil) {
+                    break;
+                }
+                if (less(data, ptr.data)) {
+                    p = ptr.left;
+                } else if (less(ptr.data, data)) {
+                    p = ptr.right;
+                } else {
+                    return p;
+                }
+            }
+            return null;
+        }
+        
+        pub fn successor(self: *Self, node: *Node) ?*Node {
+            if (node.right != self.nil) {
+                // Case 1: Go right once, then all the way left
+                var p = node.right;
+                while (p.?.left != self.nil) {
+                    p = p.?.left;
+                }
+                return p;
+            } else {
+                // Case 2: Go up until we are no longer a right child
+                var p = node.parent;
+                var n = node;
+                while (p != null and n == p.?.right) {
+                    n = p.?;
+                    p = p.?.parent;
+                }
+                return p;
             }
         }
     };
