@@ -191,7 +191,7 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
 
         pub fn insert(self: *Self, data: T) !?*RBNode {
             if (self.find(data)) |_| {
-                @panic("Cannot insert duplicate value!");
+                return error.DuplicateItem;
             }
 
             var current = self.first();
@@ -262,7 +262,9 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
         fn insertRepair(self: *Self, current_: *RBNode) void {
             var current = current_;
             var uncle: *RBNode = undefined;
-            while (current.parent.color == RED) {
+            var flag = true; // simulates a do while loop
+            while (flag or current.parent.color == RED) {
+                flag = false;
                 if (current.parent == current.parent.parent.left) {
                     uncle = current.parent.parent.right;
                     if (uncle.color == RED) {
@@ -305,13 +307,168 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             }
         }
 
+        pub fn delete(self: *Self, data: T) ?T {
+            var node: *RBNode = undefined;
+            if (self.find(data)) |found| {
+                node = found;
+            } else {
+                return null;
+            }
 
+            var target: *RBNode = undefined;
+            var child: *RBNode = undefined;
+
+            if (node.left == self.nil or node.right == self.nil) {
+                target = node;
+                if (self.min != null and self.min.? == target) {
+                    self.min.? = self.successor(node);
+                }
+            } else {
+                target = self.successor(node);
+                node.data = target.data;
+            }
+            child = if (target.left == self.nil) target.right else target.left;
+
+            // 
+            // deletion from red-black tree
+            //   4-children cluster (RED target node) becomes 3-children cluster
+            //     done
+            //   3-children cluster (RED target node) becomes 2-children cluster
+            //     done
+            //   3-children cluster (BLACK target node, RED child node) becomes 2-children cluster
+            //     paint child node BLACK, and done
+            // 
+            //   2-children root cluster (BLACK target node, BLACK child node) becomes 0-children root cluster
+            //     done
+            // 
+            //   2-children cluster (BLACK target node, 4-children sibling cluster) becomes 3-children cluster
+            //     transfer, and done
+            //   2-children cluster (BLACK target node, 3-children sibling cluster) becomes 2-children cluster
+            //     transfer, and done
+            // 
+            //   2-children cluster (BLACK target node, 2-children sibling cluster, 3/4-children parent cluster) becomes 3-children cluster
+            //     fuse, paint parent node BLACK, and done
+            //   2-children cluster (BLACK target node, 2-children sibling cluster, 2-children parent cluster) becomes 3-children cluster
+            //     fuse, and delete parent node from parent cluster
+            // 
+            if (target.color == BLACK) {
+                if (child.color == RED) {
+                    // deletion from 3-children cluster (BLACK target node, RED child node)
+                    child.color = BLACK;
+                } else if (self.first() != null and target == self.first().?) {
+                    // deletion from 2-children root cluster (BLACK target node, BLACK child node)
+                }
+                else {
+                    // deletion from 2-children cluster (BLACK target node, ...)
+                    self.deleteRepair(target);
+                }
+            } else {
+                // deletion from 4-children cluster (RED target node)
+                // deletion from 3-children cluster (RED target node)
+            }
+
+            if (child != self.nil) {
+                child.parent = target.parent;
+            }
+
+            if (target == target.parent.left) {
+                target.parent.left = child;
+            } else {
+                target.parent.right = child;
+            }
+
+            self.allocator.destroy(target);
+            return data;
+        }
+
+        fn deleteRepair(self: *Self, current_: *RBNode) void {
+            var current = current_;
+            var sibling: *RBNode = undefined;
+            var flag = true;
+            while (flag or (self.first() != null and current != self.first())) {
+                flag = false;
+                if (current == current.parent.left) {
+                    sibling = current.parent.right;
+
+                    if (sibling.color == RED) {
+                        sibling.color = BLACK;
+                        current.parent.color = RED;
+                        self.rotateLeft(current.parent);
+                        sibling = current.parent.right;
+                    }
+
+                    if (sibling.right.color == BLACK and sibling.left.color == BLACK) {
+                        // 2-children sibling cluster, fuse by recoloring
+                        sibling.color = RED;
+                        if (current.parent.color == RED) {
+                            current.parent.color = BLACK;
+                            break;
+                        } else {
+                            current = current.parent;
+                        }
+                    } else {
+                        // 3/4-children sibling cluster, perform an adjustment
+                        if (sibling.right.color == BLACK) {
+                            sibling.left.color = BLACK;
+                            sibling.color = RED;
+                            self.rotateRight(sibling);
+                            sibling = current.parent.right;
+                        }
+
+                        // transfer by rotation and recoloring
+                        sibling.color = current.parent.color;
+                        current.parent.color = BLACK;
+                        sibling.right.color = BLACK;
+                        self.rotateLeft(current.parent);
+                        break;
+                    }
+                } else {
+                    sibling = current.parent.left;
+
+                    if (sibling.color == RED) {
+                        sibling.color = BLACK;
+                        current.parent.color = RED;
+                        self.rotateRight(current.parent);
+                        sibling = current.parent.left;
+                    }
+
+                    if (sibling.right.color == BLACK and sibling.left.color == BLACK) {
+                        // 2-children sibling cluster, fuse by recoloring
+                        sibling.color = RED;
+                        if (current.parent.color == RED) {
+                            current.parent.color = BLACK;
+                            break;
+                        } else {
+                            current = current.parent;
+                        }
+                    } else {
+                        // 3/4-children sibling cluster, perform an adjustment
+                        if (sibling.left.color == BLACK) {
+                            sibling.right.color = BLACK;
+                            sibling.color = RED;
+                            self.rotateRight(current.parent);
+                            break;
+                        }
+
+                        // transfer by rotation and recoloring
+                        sibling.color = current.parent.color;
+                        current.parent.color = BLACK;
+                        sibling.left.color = BLACK;
+                        self.rotateRight(current.parent);
+                        break;
+                    }
+                }
+            }
+        }
     };
 }
 
 fn lessThanInt(a: i32, b: i32) bool {
     return a < b;
 }
+
+const testing = std.testing;
+const expect = testing.expect;
 
 test "RBT (de)initialization and insertion" {
     const allocator = std.heap.page_allocator;
@@ -322,4 +479,91 @@ test "RBT (de)initialization and insertion" {
     _ = try rbt.insert(2);
     _ = try rbt.insert(3);
     _ = try rbt.insert(6);
+}
+
+test "RBT deletion" {
+    const allocator = std.heap.page_allocator;
+    var rbt = try RBTree(i32, lessThanInt).init(allocator);
+    defer rbt.deinit();
+
+    _ = try rbt.insert(1);
+    _ = try rbt.insert(2);
+    _ = try rbt.insert(3);
+    _ = try rbt.insert(6);
+
+    _ = rbt.delete(2);
+    _ = rbt.delete(7);
+}
+
+fn mathOrder(a: i32, b: i32) bool {
+    const order = std.math.order(a, b);
+    return switch (order) {
+            .lt => true,
+            .eq, .gt => false,
+        };
+}
+
+test "RBTree basic insert, find, and delete" {
+    const allocator = std.heap.page_allocator;
+    var tree = try RBTree(i32, mathOrder).init(allocator);
+    defer tree.deinit();
+
+    // Insert elements
+    _ = try tree.insert(10);
+    _ = try tree.insert(5);
+    _ = try tree.insert(20);
+
+    // Verify structure
+    const node_10 = tree.find(10);
+    const node_5 = tree.find(5);
+    const node_20 = tree.find(20);
+
+    try expect(node_10 != null);
+    try expect(node_5 != null);
+    try expect(node_20 != null);
+
+    try expect(node_10.?.data == 10);
+    try expect(node_5.?.data == 5);
+    try expect(node_20.?.data == 20);
+
+    // Find a non-existent element
+    const node_99 = tree.find(99);
+    try expect(node_99 == null);
+
+    // Delete an element
+    const deleted = tree.delete(5);
+    try expect(deleted != null);
+    try expect(deleted.? == 5);
+
+    const node_5_after = tree.find(5);
+    try expect(node_5_after == null);
+}
+
+test "RBTree duplicate insert should panic" {
+    const allocator = std.heap.page_allocator;
+    var tree = try RBTree(i32, mathOrder).init(allocator);
+    defer tree.deinit();
+
+    _ = try tree.insert(42);
+
+    // This should panic due to duplicate insert
+    try std.testing.expectError(error.DuplicateItem, tree.insert(42));
+}
+
+test "RBTree min node tracking" {
+    const allocator = std.heap.page_allocator;
+    var tree = try RBTree(i32, mathOrder).init(allocator);
+    defer tree.deinit();
+
+    _ = try tree.insert(30);
+    _ = try tree.insert(10);
+    _ = try tree.insert(50);
+
+    try expect(tree.min != null);
+    try expect(tree.min.?.data == 10);
+
+    // Delete the current minimum
+    _ = tree.delete(10);
+    try expect(tree.min != null);
+    try expect(tree.min.?.data == 30);
 }
