@@ -20,7 +20,7 @@ pub fn List(comptime T: type) type {
         }
 
         pub fn deinit(self: *Self) void {
-            try self.clear();
+            self.clear();
         }
 
         /// Inserts a value at the tail of the list
@@ -270,7 +270,7 @@ pub fn List(comptime T: type) type {
         }
 
         /// Clears all nodes from the list
-        pub fn clear(self: *Self) !void {
+        pub fn clear(self: *Self) void {
             var current = self.head;
             while (current) |node| {
                 const next = node.next;
