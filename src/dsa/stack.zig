@@ -19,7 +19,7 @@ pub fn Stack(comptime T: type) type {
             self.list.deinit();
         }
 
-        /// Pushes an item to the top of the queue
+        /// Pushes an item to the top of the stack
         pub fn push(self: *Self, value: T) !void {
             try self.list.append(value);
         }

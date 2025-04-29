@@ -16,7 +16,9 @@ pub fn List(comptime T: type) type {
         };
 
         pub fn init(allocator: std.mem.Allocator) !Self {
-            return Self{ .allocator = allocator, };
+            return Self{
+                .allocator = allocator,
+            };
         }
 
         pub fn deinit(self: *Self) void {

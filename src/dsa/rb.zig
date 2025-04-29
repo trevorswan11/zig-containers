@@ -9,7 +9,7 @@ const TraversalOrder = enum {
     INORDER,
 };
 
-pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
+pub fn RBTree(comptime T: type, comptime less: fn (a: T, b: T) bool) type {
     return struct {
         const Self = @This();
 
@@ -108,7 +108,7 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             }
             return null;
         }
-        
+
         pub fn successor(self: *Self, node: *RBNode) *RBNode {
             if (node.right != self.nil) {
                 // Case 1: Go right once, then all the way left
@@ -201,7 +201,7 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
                 if (current.? == self.nil) {
                     break;
                 }
-                
+
                 if (current) |c| {
                     parent = c;
                     if (less(data, c.data)) {
@@ -230,8 +230,8 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             if (self.min == null or less(real_current.data, self.min.?.data)) {
                 self.min = real_current;
             }
-            
-            // 
+
+            //
             // insertion into a red-black tree:
             // 0-children root cluster (parent node is BLACK) becomes 2-children root cluster (new root node)
             //   paint root node BLACK, and done
@@ -243,7 +243,7 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             //   rotate, and done
             // 4-children cluster (parent node is RED) splits into 2-children cluster and 3-children cluster
             //   split, and insert grandparent node into parent cluster
-            // 
+            //
             if (real_current.parent.color == RED) {
                 // insertion into 3-children cluster (parent node is RED)
                 // insertion into 4-children cluster (parent node is RED)
@@ -329,7 +329,7 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             }
             child = if (target.left == self.nil) target.right else target.left;
 
-            // 
+            //
             // deletion from red-black tree
             //   4-children cluster (RED target node) becomes 3-children cluster
             //     done
@@ -337,28 +337,27 @@ pub fn RBTree(comptime T: type, comptime less: fn(a: T, b: T) bool) type {
             //     done
             //   3-children cluster (BLACK target node, RED child node) becomes 2-children cluster
             //     paint child node BLACK, and done
-            // 
+            //
             //   2-children root cluster (BLACK target node, BLACK child node) becomes 0-children root cluster
             //     done
-            // 
+            //
             //   2-children cluster (BLACK target node, 4-children sibling cluster) becomes 3-children cluster
             //     transfer, and done
             //   2-children cluster (BLACK target node, 3-children sibling cluster) becomes 2-children cluster
             //     transfer, and done
-            // 
+            //
             //   2-children cluster (BLACK target node, 2-children sibling cluster, 3/4-children parent cluster) becomes 3-children cluster
             //     fuse, paint parent node BLACK, and done
             //   2-children cluster (BLACK target node, 2-children sibling cluster, 2-children parent cluster) becomes 3-children cluster
             //     fuse, and delete parent node from parent cluster
-            // 
+            //
             if (target.color == BLACK) {
                 if (child.color == RED) {
                     // deletion from 3-children cluster (BLACK target node, RED child node)
                     child.color = BLACK;
                 } else if (self.first() != null and target == self.first().?) {
                     // deletion from 2-children root cluster (BLACK target node, BLACK child node)
-                }
-                else {
+                } else {
                     // deletion from 2-children cluster (BLACK target node, ...)
                     self.deleteRepair(target);
                 }
@@ -498,9 +497,9 @@ test "RBT deletion" {
 fn mathOrder(a: i32, b: i32) bool {
     const order = std.math.order(a, b);
     return switch (order) {
-            .lt => true,
-            .eq, .gt => false,
-        };
+        .lt => true,
+        .eq, .gt => false,
+    };
 }
 
 test "RBTree basic insert, find, and delete" {

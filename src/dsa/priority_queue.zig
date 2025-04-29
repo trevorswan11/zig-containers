@@ -1,9 +1,7 @@
 const std = @import("std");
 const array_list = @import("array.zig").Array;
 
-pub const PQType = enum {
-    max_at_top, min_at_top
-};
+pub const PQType = enum { max_at_top, min_at_top };
 
 pub fn PriorityQueue(comptime T: type, comptime less: fn (a: T, b: T) bool) type {
     return struct {
@@ -13,7 +11,7 @@ pub fn PriorityQueue(comptime T: type, comptime less: fn (a: T, b: T) bool) type
             max_at_top: MaxAtTopPQ(T, less),
             min_at_top: MinAtTopPQ(T, less),
         };
-        
+
         impl: Impl,
         allocator: std.mem.Allocator,
 

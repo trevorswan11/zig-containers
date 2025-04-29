@@ -13,7 +13,12 @@ pub fn Array(comptime T: type) type {
 
         pub fn init(allocator: std.mem.Allocator, initial_capacity: usize) !Self {
             const arr = try allocator.alloc(T, initial_capacity);
-            return Self{ .arr = arr, .len = 0, .capacity = if (initial_capacity > 0) initial_capacity else 1, .allocator = allocator, };
+            return Self{
+                .arr = arr,
+                .len = 0,
+                .capacity = if (initial_capacity > 0) initial_capacity else 1,
+                .allocator = allocator,
+            };
         }
 
         pub fn deinit(self: *Self) void {
