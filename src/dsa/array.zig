@@ -46,6 +46,21 @@ pub fn Array(comptime T: type) type {
             self.len += 1;
         }
 
+        pub fn remove(self: *Self, index: usize) !T {
+            if (index >= self.len) {
+                return error.IndexOutOfBounds;
+            }
+
+            const to_remove = self.arr[index];
+            var i = index;
+            while (i < self.len - 1) : (i += 1) {
+                self.arr[i] = self.arr[i + 1];
+            }
+
+            self.len -= 1;
+            return to_remove;
+        }
+
         pub fn set(self: *Self, index: usize, value: T) !void {
             if (index > self.len or index < 0) {
                 return error.IndexOutOfBounds;
@@ -54,19 +69,19 @@ pub fn Array(comptime T: type) type {
             self.arr[index] = value;
         }
 
-        pub fn pop(self: *Self) ?T {
+        pub fn pop(self: *Self) !T {
             if (self.len <= 0) {
                 self.len = 0;
-                return null;
+                return error.IndexOutOfBounds;
             }
 
             self.len -= 1;
             return self.arr[self.len];
         }
 
-        pub fn get(self: *Self, index: usize) ?T {
+        pub fn get(self: *Self, index: usize) !T {
             if (index >= self.len or index < 0) {
-                return null;
+                return error.IndexOutOfBounds;
             }
             return self.arr[index];
         }
@@ -117,7 +132,7 @@ test "push" {
     defer test_array.deinit();
 
     try test_array.push(2);
-    try expect(test_array.get(0) == 2);
+    try expect(try test_array.get(0) == 2);
 
     for (3..10) |i| {
         try test_array.push(@intCast(i));
@@ -138,10 +153,47 @@ test "insert" {
     try test_array.insert(0, 20);
     try test_array.insert(3, 10);
 
-    try expect(test_array.get(0) == 20);
-    try expect(test_array.get(3) == 10);
+    try expect(try test_array.get(0) == 20);
+    try expect(try test_array.get(3) == 10);
 
     try testing.expectError(error.IndexOutOfBounds, test_array.insert(200, 1));
+    try testing.expectError(error.IndexOutOfBounds, test_array.get(1100));
+}
+
+test "remove from array list works correctly" {
+    const T = i32;
+    const capacity = 10;
+
+    const allocator = std.testing.allocator;
+
+    var list = try Array(T).init(allocator, capacity);
+    defer list.deinit();
+
+    // Fill the list
+    try list.insert(0, 10);
+    try list.insert(1, 20);
+    try list.insert(2, 30);
+    try list.insert(3, 40);
+
+    try expect(list.len == 4);
+
+    const removed = try list.remove(1);
+    try expect(removed == 20);
+    try expect(list.len == 3);
+    try expect(list.arr[0] == 10);
+    try expect(list.arr[1] == 30);
+    try expect(list.arr[2] == 40);
+
+    const removed2 = try list.remove(0);
+    try expect(removed2 == 10);
+    try expect(list.len == 2);
+    try expect(list.arr[0] == 30);
+    try expect(list.arr[1] == 40);
+
+    const removed3 = try list.remove(1);
+    try expect(removed3 == 40);
+    try expect(list.len == 1);
+    try expect(list.arr[0] == 30);
 }
 
 test "pop" {
@@ -152,7 +204,7 @@ test "pop" {
     for (1..10) |i| {
         const to_put = 1.25 * @as(f32, @floatFromInt(i));
         try test_array.push(to_put);
-        try expect(test_array.pop().? == to_put);
+        try expect(try test_array.pop() == to_put);
     }
 
     try expect(test_array.empty());
@@ -168,7 +220,7 @@ test "get" {
     }
 
     for (0..9, 1..10) |idx, val| {
-        try expect(test_array.get(idx) == @as(u32, @intCast(val)));
+        try expect(try test_array.get(idx) == @as(u32, @intCast(val)));
     }
 
     try expect(!test_array.empty());
