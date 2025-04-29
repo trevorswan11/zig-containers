@@ -7,6 +7,8 @@ pub const Deque = @import("dsa/deque.zig").Deque;
 pub const RBTree = @import("dsa/rb.zig").RBTree;
 pub const PriorityQueue = @import("dsa/priority_queue.zig").PriorityQueue;
 pub const PQType = @import("dsa/priority_queue.zig").PQType;
+pub const HashMap = @import("dsa/hash_map.zig").HashMap;
+pub const HashSet = @import("dsa/hash_set.zig").HashSet;
 
 // Memory
 pub const Ref = @import("mem/shared_ptr.zig").SharedPtr;
