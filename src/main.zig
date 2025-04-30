@@ -37,7 +37,7 @@ pub fn main() !void {
     try deque.pushTail(50);
     const front = deque.popHead();
     const back = deque.popTail();
-    std.debug.print("Deque front = {any}, back = {any}\n", .{front, back});
+    std.debug.print("Deque front = {any}, back = {any}\n", .{ front, back });
 
     // RBTree
     var tree = try lib.RBTree(i32, lessThanInt).init(allocator);

@@ -117,6 +117,10 @@ pub fn Array(comptime T: type) type {
         fn calculateNewCapacity(old_capacity: usize) usize {
             return @as(usize, @intFromFloat(@ceil(@as(f32, @floatFromInt(old_capacity)) * GROWTH_FACTOR)));
         }
+
+        pub fn clear(self: *Self) void {
+            self.len = 0;
+        }
     };
 }
 

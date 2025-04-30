@@ -208,7 +208,9 @@ pub fn RBTree(comptime T: type, comptime less: fn (a: T, b: T) bool) type {
                         current.? = c.left;
                     } else if (less(c.data, data)) {
                         current.? = c.right;
-                    } else unreachable;
+                    } else {
+                        return error.DuplicateItem;
+                    }
                 }
             }
 
@@ -459,6 +461,46 @@ pub fn RBTree(comptime T: type, comptime less: fn (a: T, b: T) bool) type {
                 }
             }
         }
+
+        fn checkInvariants(self: *Self) !void {
+            if (self.root != null) {
+                try self.assertBlackRoot();
+                try self.assertNoRedRed(self.root);
+                _ = try self.countBlackHeight(self.root);
+            }
+        }
+
+        fn assertBlackRoot(self: *Self) !void {
+            if (self.root.?.color != BLACK)
+                return error.RootNotBlack;
+        }
+
+        fn assertNoRedRed(self: *Self, node: ?*RBNode) !void {
+            if (node == null or node.? == self.nil) return;
+
+            if (node.?.color == RED) {
+                if (node.?.left != self.nil and node.?.left.color == RED)
+                    return error.RedViolation;
+                if (node.?.right != self.nil and node.?.right.color == RED)
+                    return error.RedViolation;
+            }
+
+            try self.assertNoRedRed(node.?.left);
+            try self.assertNoRedRed(node.?.right);
+        }
+
+        fn countBlackHeight(self: *Self, node: ?*RBNode) !usize {
+            if (node == null or node.? == self.nil) return 1;
+
+            const left_height = try self.countBlackHeight(node.?.left);
+            const right_height = try self.countBlackHeight(node.?.right);
+
+            if (left_height != right_height)
+                return error.BlackHeightMismatch;
+
+            const is_black = node.?.color == BLACK;
+            return left_height + @intFromBool(is_black);
+        }
     };
 }
 
@@ -475,6 +517,7 @@ test "RBT (de)initialization and insertion" {
     defer rbt.deinit();
 
     _ = try rbt.insert(1);
+    try rbt.checkInvariants();
     _ = try rbt.insert(2);
     _ = try rbt.insert(3);
     _ = try rbt.insert(6);
@@ -494,17 +537,9 @@ test "RBT deletion" {
     _ = rbt.delete(7);
 }
 
-fn mathOrder(a: i32, b: i32) bool {
-    const order = std.math.order(a, b);
-    return switch (order) {
-        .lt => true,
-        .eq, .gt => false,
-    };
-}
-
 test "RBTree basic insert, find, and delete" {
     const allocator = std.heap.page_allocator;
-    var tree = try RBTree(i32, mathOrder).init(allocator);
+    var tree = try RBTree(i32, lessThanInt).init(allocator);
     defer tree.deinit();
 
     // Insert elements
@@ -540,7 +575,7 @@ test "RBTree basic insert, find, and delete" {
 
 test "RBTree duplicate insert should panic" {
     const allocator = std.heap.page_allocator;
-    var tree = try RBTree(i32, mathOrder).init(allocator);
+    var tree = try RBTree(i32, lessThanInt).init(allocator);
     defer tree.deinit();
 
     _ = try tree.insert(42);
@@ -551,7 +586,7 @@ test "RBTree duplicate insert should panic" {
 
 test "RBTree min node tracking" {
     const allocator = std.heap.page_allocator;
-    var tree = try RBTree(i32, mathOrder).init(allocator);
+    var tree = try RBTree(i32, lessThanInt).init(allocator);
     defer tree.deinit();
 
     _ = try tree.insert(30);
