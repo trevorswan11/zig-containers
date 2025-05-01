@@ -45,7 +45,6 @@ pub fn AdjacencyMatrix(comptime T: type) type {
                 return error.IndexOutOfBounds;
             }
             self.matrix[from][to].flag = true;
-            self.matrix[to][from].flag = true;
             self.edge_count += 1;
         }
 
@@ -54,22 +53,21 @@ pub fn AdjacencyMatrix(comptime T: type) type {
                 return error.IndexOutOfBounds;
             }
             self.matrix[from][to].flag = false;
-            self.matrix[to][from].flag = false;
             self.edge_count -= 1;
         }
 
-        pub fn getNeighbors(self: *Self, node: usize) ?[]Node {
+        pub fn getNeighbors(self: *Self, node: usize) ![]Node {
             if (node >= self.size) {
-                return null;
+                return error.IndexOutOfBounds;
             }
             return self.matrix[node];
         }
 
-        pub fn containsEdge(self: *Self, from: usize, to: usize) ?Node {
+        pub fn containsEdge(self: *Self, from: usize, to: usize) !bool {
             if (from >= self.size or to >= self.size) {
-                return null;
+                return error.IndexOutOfBounds;
             }
-            return self.matrix[from][to];
+            return self.matrix[from][to].flag;
         }
     };
 }
@@ -95,10 +93,10 @@ test "add and check edge" {
     try matrix.addEdge(0, 1);
     try matrix.addEdge(1, 2);
 
-    try expect(matrix.containsEdge(0, 1).?.flag);
-    try expect(matrix.containsEdge(1, 0).?.flag); // undirected
-    try expect(matrix.containsEdge(1, 2).?.flag);
-    try expect(!matrix.containsEdge(0, 2).?.flag);
+    try expect(try matrix.containsEdge(0, 1));
+    try expect(!try matrix.containsEdge(1, 0));
+    try expect(try matrix.containsEdge(1, 2));
+    try expect(!try matrix.containsEdge(0, 2));
 
     try expectEqual(matrix.edge_count, 2);
 }
@@ -109,11 +107,12 @@ test "remove edge" {
     defer matrix.deinit();
 
     try matrix.addEdge(0, 1);
-    try expect(matrix.containsEdge(1, 0).?.flag);
+    try expect(try matrix.containsEdge(0, 1));
+    try expect(!try matrix.containsEdge(1, 0));
     try expectEqual(matrix.edge_count, 1);
 
     try matrix.removeEdge(0, 1);
-    try expect(!matrix.containsEdge(0, 1).?.flag);
+    try expect(!try matrix.containsEdge(0, 1));
     try expectEqual(matrix.edge_count, 0);
 }
 
@@ -125,7 +124,7 @@ test "get neighbors" {
     try matrix.addEdge(0, 1);
     try matrix.addEdge(0, 2);
 
-    const neighbors = matrix.getNeighbors(0).?;
+    const neighbors = try matrix.getNeighbors(0);
     try expect(neighbors[1].flag);
     try expect(neighbors[2].flag);
     try expect(!neighbors[0].flag);
@@ -139,6 +138,6 @@ test "out-of-bounds edge operations return error/null" {
     try std.testing.expectError(error.IndexOutOfBounds, matrix.addEdge(0, 2));
     try std.testing.expectError(error.IndexOutOfBounds, matrix.removeEdge(2, 1));
 
-    try expect(matrix.getNeighbors(5) == null);
-    try expect(matrix.containsEdge(5, 1) == null);
+    try testing.expectError(error.IndexOutOfBounds, matrix.getNeighbors(5));
+    try testing.expectError(error.IndexOutOfBounds, matrix.containsEdge(5, 1));
 }

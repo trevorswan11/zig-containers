@@ -22,7 +22,10 @@ pub fn Array(comptime T: type) type {
         }
 
         pub fn deinit(self: *Self) void {
-            self.allocator.free(self.arr);
+            if (self.arr.len != 0) {
+                self.allocator.free(self.arr);
+                self.arr = &[_]T{};
+            }
         }
 
         pub fn empty(self: *Self) bool {
@@ -36,7 +39,7 @@ pub fn Array(comptime T: type) type {
         }
 
         pub fn insert(self: *Self, index: usize, value: T) !void {
-            if (index > self.len or index < 0) {
+            if (index > self.len) {
                 return error.IndexOutOfBounds;
             }
 
@@ -67,7 +70,7 @@ pub fn Array(comptime T: type) type {
         }
 
         pub fn set(self: *Self, index: usize, value: T) !void {
-            if (index > self.len or index < 0) {
+            if (index > self.len) {
                 return error.IndexOutOfBounds;
             }
 
@@ -75,8 +78,7 @@ pub fn Array(comptime T: type) type {
         }
 
         pub fn pop(self: *Self) !T {
-            if (self.len <= 0) {
-                self.len = 0;
+            if (self.len == 0) {
                 return error.IndexOutOfBounds;
             }
 
@@ -85,7 +87,7 @@ pub fn Array(comptime T: type) type {
         }
 
         pub fn get(self: *Self, index: usize) !T {
-            if (index >= self.len or index < 0) {
+            if (index >= self.len) {
                 return error.IndexOutOfBounds;
             }
             return self.arr[index];
@@ -94,9 +96,9 @@ pub fn Array(comptime T: type) type {
         pub fn print(self: *Self) void {
             std.debug.print("[", .{});
             for (self.arr[0..self.len]) |value| {
-                std.debug.print(" {} ", .{value});
+                std.debug.print(" {}", .{value});
             }
-            std.debug.print("]", .{});
+            std.debug.print(" ]", .{});
         }
 
         fn grow(self: *Self) !void {

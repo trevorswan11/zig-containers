@@ -21,9 +21,16 @@ pub fn AdjacencyList(comptime T: type) type {
         pub fn deinit(self: *Self) void {
             var it = self.map.map.valueIterator();
             while (it.next()) |list| {
-                list.deinit();
+                list.*.deinit();
             }
             self.map.deinit();
+        }
+
+        pub fn put(self: *Self, node: T) !void {
+            if (self.containsNode(node)) {
+                return;
+            }
+            try self.map.put(node, try array(T).init(self.allocator, DEFAULT_LIST_SIZE));
         }
 
         pub fn addEdge(self: *Self, from: T, to: T) !void {
