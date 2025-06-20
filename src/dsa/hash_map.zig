@@ -1,10 +1,12 @@
 const std = @import("std");
 
-pub fn HashMap(comptime K: type, comptime V: type) type {
+pub fn HashMap(comptime K: type, comptime V: type, comptime Ctx: type) type {
     const MapType = if (K == []const u8)
         std.StringHashMap(V)
+    else if (Ctx == void)
+        std.AutoHashMap(K, V)
     else
-        std.AutoHashMap(K, V);
+        std.HashMap(K, V, Ctx, 80);
 
     return struct {
         const Self = @This();
@@ -12,9 +14,31 @@ pub fn HashMap(comptime K: type, comptime V: type) type {
         map: MapType,
         allocator: std.mem.Allocator,
 
-        pub fn init(allocator: std.mem.Allocator) Self {
+        pub fn init(allocator: std.mem.Allocator) !Self {
+            if (Ctx != void) {
+                if (!@hasDecl(Ctx, "eql") or !@hasDecl(Ctx, "hash")) {
+                    return error.MalformedHashContext;
+                }
+                const default_ctx = Ctx{};
+                return Self{
+                    .map = MapType.initContext(allocator, default_ctx),
+                    .allocator = allocator,
+                };
+            }
+
             return Self{
                 .map = MapType.init(allocator),
+                .allocator = allocator,
+            };
+        }
+
+        pub fn initContext(allocator: std.mem.Allocator, context: Ctx) !Self {
+            if (!@hasDecl(Ctx, "eql") or !@hasDecl(Ctx, "hash")) {
+                return error.MalformedHashContext;
+            }
+
+            return Self{
+                .map = MapType.initContext(allocator, context),
                 .allocator = allocator,
             };
         }
@@ -60,7 +84,7 @@ const expectEqual = std.testing.expectEqual;
 
 test "hash map initialization" {
     const allocator = std.heap.page_allocator;
-    var map = HashMap(u32, u32).init(allocator);
+    var map = try HashMap(u32, u32, void).init(allocator);
     defer map.map.deinit();
 
     try expect(map.size() == 0);
@@ -68,7 +92,7 @@ test "hash map initialization" {
 
 test "put and find" {
     const allocator = std.heap.page_allocator;
-    var map = HashMap(u32, u32).init(allocator);
+    var map = try HashMap(u32, u32, void).init(allocator);
     defer map.map.deinit();
 
     try map.put(1, 100);
@@ -81,7 +105,7 @@ test "put and find" {
 
 test "overwrite existing key" {
     const allocator = std.heap.page_allocator;
-    var map = HashMap(u32, u32).init(allocator);
+    var map = try HashMap(u32, u32, void).init(allocator);
     defer map.map.deinit();
 
     try map.put(42, 500);
@@ -93,7 +117,7 @@ test "overwrite existing key" {
 
 test "remove key" {
     const allocator = std.heap.page_allocator;
-    var map = HashMap(u32, u32).init(allocator);
+    var map = try HashMap(u32, u32, void).init(allocator);
     defer map.map.deinit();
 
     try map.put(77, 1234);
@@ -105,7 +129,7 @@ test "remove key" {
 
 test "containsKey" {
     const allocator = std.heap.page_allocator;
-    var map = HashMap(u32, u32).init(allocator);
+    var map = try HashMap(u32, u32, void).init(allocator);
     defer map.map.deinit();
 
     try map.put(8, 800);
@@ -118,7 +142,7 @@ test "containsKey" {
 
 test "remove non-existent key returns null" {
     const allocator = std.heap.page_allocator;
-    var map = HashMap(u32, u32).init(allocator);
+    var map = try HashMap(u32, u32, void).init(allocator);
     defer map.map.deinit();
 
     try expect(map.remove(404) == null);
@@ -126,7 +150,7 @@ test "remove non-existent key returns null" {
 
 test "clear empties the map" {
     const allocator = std.heap.page_allocator;
-    var map = HashMap(u32, u32).init(allocator);
+    var map = try HashMap(u32, u32, void).init(allocator);
     defer map.map.deinit();
 
     try map.put(1, 11);
@@ -142,7 +166,7 @@ test "clear empties the map" {
 }
 
 test "hash map with string key" {
-    var map = HashMap([]const u8, u32).init(std.testing.allocator);
+    var map = try HashMap([]const u8, u32, void).init(std.testing.allocator);
     defer map.deinit();
 
     try map.put("key", 99);
@@ -150,4 +174,37 @@ test "hash map with string key" {
     try expect(map.find("key").? == 99);
     try expect(map.remove("key").? == 99);
     try expect(!map.containsKey("key"));
+}
+
+const MyCtx = struct {
+    pub fn hash(_: @This(), key: u32) u64 {
+        return key * 26;
+    }
+
+    pub fn eql(_: @This(), a: u32, b: u32) bool {
+        return a == b;
+    }
+};
+
+test "hash map with custom context" {
+    var map = try HashMap(u32, []const u8, MyCtx).initContext(std.testing.allocator, MyCtx{});
+    defer map.deinit();
+
+    try map.put(123, "hello");
+    try map.put(456, "world");
+
+    try expect(map.containsKey(123));
+    try expectEqual("hello", map.find(123).?);
+
+    try expect(map.containsKey(456));
+    try expectEqual(
+        "world",
+        map.find(456).?,
+    );
+
+    try expect(map.size() == 2);
+
+    try expectEqual("hello", map.remove(123).?);
+    try expectEqual("world", map.remove(456).?);
+    try expect(map.size() == 0);
 }

@@ -77,7 +77,6 @@ fn addTestStep(b: *std.Build, lib_mod: *std.Build.Module, exe_mod: *std.Build.Mo
 
     addLibTestStep(b, lib_mod, test_step);
     addExeTestStep(b, exe_mod, test_step);
-    addSourceTests(b, test_step);
 }
 
 /// Adds all tests associated with the root lib module, conventionally `root.zig`
@@ -101,7 +100,7 @@ fn addExeTestStep(b: *std.Build, exe_mod: *std.Build.Module, test_step: *std.Bui
 /// Adds a step to format all code using the zig compiler's formatter
 fn addFmtStep(b: *std.Build) void {
     const lint = b.addSystemCommand(&[_][]const u8{
-        "zig", "fmt", SOURCE_DIRECTORY++"/",
+        "zig", "fmt", SOURCE_DIRECTORY,
     });
 
     const step = b.step("lint", "Check formatting of Zig source files");
@@ -127,27 +126,6 @@ fn addCompileCheckStep(b: *std.Build) void {
             "zig", "ast-check", p
         });
         step.dependOn(&compile.step);
-    }
-}
-
-/// Adds all other source files to the test step. This can increase the compile time when running 
-/// `zig build test`, but correctly allows all tests in the src directory to be executed correctly
-fn addSourceTests(b: *std.Build, test_step: *std.Build.Step) void {
-    const gpa = std.heap.page_allocator;
-    const paths = getZigSourceFiles(gpa, SOURCE_DIRECTORY) catch {
-        std.debug.print("Failed to collect source files\n", .{});
-        return;
-    };
-
-    defer {
-        for (paths.items) |p| gpa.free(p);
-        paths.deinit();
-    }
-
-    for (paths.items) |path| {
-        test_step.dependOn(&(b.addRunArtifact(b.addTest(.{
-            .root_source_file = b.path(path),
-        }))).step);
     }
 }
 

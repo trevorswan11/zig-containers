@@ -5,17 +5,17 @@ const hash_set = @import("hash_set.zig").HashSet;
 const adjacency_list = @import("adjacency_list.zig").AdjacencyList;
 
 /// T must be hashable
-pub fn Graph(comptime T: type) type {
+pub fn Graph(comptime T: type, Ctx: type) type {
     return struct {
         const Self = @This();
 
-        adj_list: adjacency_list(T),
+        adj_list: adjacency_list(T, Ctx),
         allocator: std.mem.Allocator,
 
         pub fn init(allocator: std.mem.Allocator) Self {
             return Self{
                 .allocator = allocator,
-                .adj_list = adjacency_list(T).init(allocator),
+                .adj_list = adjacency_list(T, Ctx).init(allocator),
             };
         }
 
@@ -74,7 +74,7 @@ pub fn Graph(comptime T: type) type {
                 return;
             }
 
-            var visited = hash_set(T).init(self.allocator);
+            var visited = try hash_set(T, Ctx).init(self.allocator);
             defer visited.deinit();
 
             var q = queue(T).init(self.allocator) catch return;
@@ -107,7 +107,7 @@ pub fn Graph(comptime T: type) type {
                 return;
             }
 
-            var visited = hash_set(T).init(self.allocator);
+            var visited = try hash_set(T, Ctx).init(self.allocator);
             defer visited.deinit();
 
             self.dfsHelper(start, ctx, visitor, &visited);
@@ -118,7 +118,7 @@ pub fn Graph(comptime T: type) type {
             current: T,
             ctx: anytype,
             visitor: fn (@TypeOf(ctx), T) void,
-            visited: *hash_set(T),
+            visited: *hash_set(T, Ctx),
         ) void {
             if (visited.contains(current)) {
                 return;
@@ -140,7 +140,7 @@ const testing = std.testing;
 
 test "basic graph operations" {
     const allocator = std.testing.allocator;
-    var graph = Graph(u32).init(allocator);
+    var graph = Graph(u32, void).init(allocator);
     defer graph.deinit();
 
     try graph.addEdge(1, 2);
@@ -192,7 +192,7 @@ test "basic graph operations" {
 
 test "put then addEdge maintains consistency" {
     const allocator = std.heap.page_allocator;
-    var graph = adjacency_list(u32).init(allocator);
+    var graph = adjacency_list(u32, void).init(allocator);
     defer graph.deinit();
 
     try graph.put(100);
@@ -206,7 +206,7 @@ test "put then addEdge maintains consistency" {
 
 test "self-loop edge is allowed" {
     const allocator = std.heap.page_allocator;
-    var graph = adjacency_list(u32).init(allocator);
+    var graph = adjacency_list(u32, void).init(allocator);
     defer graph.deinit();
 
     try graph.addEdge(9, 9);
@@ -217,7 +217,7 @@ test "self-loop edge is allowed" {
 
 test "graph supports many nodes and edges" {
     const allocator = std.heap.page_allocator;
-    var graph = adjacency_list(usize).init(allocator);
+    var graph = adjacency_list(usize, void).init(allocator);
     defer graph.deinit();
 
     for (0..100) |i| {
@@ -237,7 +237,7 @@ test "graph supports many nodes and edges" {
 
 test "clear then reuse graph" {
     const allocator = std.heap.page_allocator;
-    var graph = adjacency_list(u32).init(allocator);
+    var graph = adjacency_list(u32, void).init(allocator);
     defer graph.deinit();
 
     try graph.addEdge(1, 2);
@@ -255,7 +255,7 @@ test "clear then reuse graph" {
 
 test "addEdge implicitly adds node" {
     const allocator = std.heap.page_allocator;
-    var graph = adjacency_list(u32).init(allocator);
+    var graph = adjacency_list(u32, void).init(allocator);
     defer graph.deinit();
 
     try graph.addEdge(77, 88); // 77 not explicitly put before

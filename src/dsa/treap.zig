@@ -8,7 +8,7 @@ pub fn Treap(comptime T: type, comptime less: fn (a: T, b: T) bool) type {
         const Self = @This();
 
         root: ?*Node,
-        set: hash_set(u64),
+        set: hash_set(u64, void),
         allocator: std.mem.Allocator,
 
         const Node = struct {
@@ -32,7 +32,7 @@ pub fn Treap(comptime T: type, comptime less: fn (a: T, b: T) bool) type {
         pub fn init(allocator: std.mem.Allocator) Self {
             return Self{
                 .root = null,
-                .set = hash_set(u64).init(allocator),
+                .set = try hash_set(u64, void).init(allocator),
                 .allocator = allocator,
             };
         }

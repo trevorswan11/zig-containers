@@ -14,3 +14,19 @@ pub const Graph = @import("dsa/graph.zig").Graph;
 // Memory
 pub const Ref = @import("mem/shared_ptr.zig").SharedPtr;
 pub const Scope = @import("mem/unique_ptr.zig").UniquePtr;
+
+test {
+    _ = @import("dsa/array.zig");
+    _ = @import("dsa/list.zig");
+    _ = @import("dsa/queue.zig");
+    _ = @import("dsa/stack.zig");
+    _ = @import("dsa/deque.zig");
+    _ = @import("dsa/treap.zig");
+    _ = @import("dsa/priority_queue.zig");
+    _ = @import("dsa/hash_map.zig");
+    _ = @import("dsa/hash_set.zig");
+    _ = @import("dsa/graph.zig");
+
+    _ = @import("mem/shared_ptr.zig");
+    _ = @import("mem/unique_ptr.zig");
+}

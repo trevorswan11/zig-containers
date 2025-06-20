@@ -39,14 +39,6 @@ pub fn main() !void {
     const back = deque.popTail();
     std.debug.print("Deque front = {any}, back = {any}\n", .{ front, back });
 
-    // RBTree
-    var tree = try lib.RBTree(i32, lessThanInt).init(allocator);
-    defer tree.deinit();
-    _ = try tree.insert(42);
-    if (tree.find(42)) |val| {
-        std.debug.print("RBTree[1] = {}\n", .{val.data});
-    }
-
     // PriorityQueue
     var pq = try lib.PriorityQueue(i32, lessThanInt).init(allocator, .min_at_top, @as(usize, 4));
     defer pq.deinit();
@@ -55,7 +47,7 @@ pub fn main() !void {
     std.debug.print("PriorityQueue min = {}\n", .{try pq.peek()});
 
     // HashMap
-    var map = lib.HashMap([]const u8, i32).init(allocator);
+    var map = try lib.HashMap([]const u8, i32, void).init(allocator);
     defer map.deinit();
     try map.put("a", 123);
     if (map.find("a")) |val| {
@@ -63,7 +55,7 @@ pub fn main() !void {
     }
 
     // HashSet
-    var set = lib.HashSet([]const u8).init(allocator);
+    var set = try lib.HashSet([]const u8, void).init(allocator);
     defer set.deinit();
     try set.insert("zig");
     std.debug.print("HashSet contains 'zig' = {}\n", .{set.contains("zig")});

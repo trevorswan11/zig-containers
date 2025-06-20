@@ -4,16 +4,16 @@ const array = @import("array.zig").Array;
 
 const DEFAULT_LIST_SIZE: usize = 7;
 
-pub fn AdjacencyList(comptime T: type) type {
+pub fn AdjacencyList(comptime T: type, Ctx: type) type {
     return struct {
         const Self = @This();
 
-        map: hash_map(T, array(T)),
+        map: hash_map(T, array(T), Ctx),
         allocator: std.mem.Allocator,
 
         pub fn init(allocator: std.mem.Allocator) Self {
             return Self{
-                .map = hash_map(T, array(T)).init(allocator),
+                .map = try hash_map(T, array(T), Ctx).init(allocator),
                 .allocator = allocator,
             };
         }
@@ -46,11 +46,11 @@ pub fn AdjacencyList(comptime T: type) type {
             return if (found) |list| list else null;
         }
 
-        pub fn containsNode(self: *AdjacencyList(T), node: T) bool {
+        pub fn containsNode(self: *AdjacencyList(T, Ctx), node: T) bool {
             return self.map.containsKey(node);
         }
 
-        pub fn clear(self: *AdjacencyList(T)) void {
+        pub fn clear(self: *AdjacencyList(T, Ctx)) void {
             var it = self.map.map.valueIterator();
             while (it.next()) |list| {
                 list.clear();
@@ -58,7 +58,7 @@ pub fn AdjacencyList(comptime T: type) type {
             self.map.clear();
         }
 
-        pub fn size(self: *AdjacencyList(T)) usize {
+        pub fn size(self: *AdjacencyList(T, Ctx)) usize {
             return self.map.size();
         }
 
@@ -80,7 +80,7 @@ const expectEqual = std.testing.expectEqual;
 
 test "add and check neighbors" {
     const allocator = std.heap.page_allocator;
-    var graph = AdjacencyList(u32).init(allocator);
+    var graph = AdjacencyList(u32, void).init(allocator);
     defer graph.deinit();
 
     try graph.addEdge(1, 2);
@@ -99,7 +99,7 @@ test "add and check neighbors" {
 
 test "containsNode" {
     const allocator = std.heap.page_allocator;
-    var graph = AdjacencyList(u32).init(allocator);
+    var graph = AdjacencyList(u32, void).init(allocator);
     defer graph.deinit();
 
     try graph.addEdge(5, 6);
@@ -112,7 +112,7 @@ test "containsNode" {
 
 test "getNeighbors returns null for missing node" {
     const allocator = std.heap.page_allocator;
-    var graph = AdjacencyList(u32).init(allocator);
+    var graph = AdjacencyList(u32, void).init(allocator);
     defer graph.deinit();
 
     try expect(graph.getNeighbors(42) == null);
@@ -120,7 +120,7 @@ test "getNeighbors returns null for missing node" {
 
 test "clear empties the graph" {
     const allocator = std.heap.page_allocator;
-    var graph = AdjacencyList(u32).init(allocator);
+    var graph = AdjacencyList(u32, void).init(allocator);
     defer graph.deinit();
 
     try graph.addEdge(1, 2);
