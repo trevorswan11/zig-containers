@@ -101,6 +101,14 @@ pub fn Array(comptime T: type) type {
             std.debug.print(" ]", .{});
         }
 
+        pub fn toOwnedSlice(self: *Self) ![]T {
+            const slice = try self.allocator.alloc(T, self.len);
+            for (self.arr[0..self.len], 0..) |value, i| {
+                slice[i] = value;
+            }
+            return slice;
+        }
+
         fn grow(self: *Self) !void {
             if (self.len >= self.capacity) {
                 const new_capacity = calculateNewCapacity(self.capacity);
