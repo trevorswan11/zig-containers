@@ -260,9 +260,9 @@ pub fn Treap(comptime T: type, comptime less: fn (a: T, b: T) bool, comptime eql
 
         fn preorderImpl(self: *Self, node: ?*Node, writer: std.io.AnyWriter) !void {
             if (node) |n| {
-                try self.preorderImpl(n.left);
+                try self.preorderImpl(n.left, writer);
                 try writer.print("key: {}, priority: {}\n", .{ n.key, n.priority });
-                try self.preorderImpl(n.right);
+                try self.preorderImpl(n.right, writer);
             }
         }
 
