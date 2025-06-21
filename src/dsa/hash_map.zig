@@ -68,7 +68,7 @@ pub fn HashMap(comptime K: type, comptime V: type, comptime Ctx: type) type {
         pub fn print(self: *Self) void {
             var it = self.map.iterator();
             while (it.next()) |entry| {
-                std.debug.print("Key {}, Value {}", .{entry.key_ptr.*, entry.value_ptr.*});
+                std.debug.print("Key {}, Value {}", .{ entry.key_ptr.*, entry.value_ptr.* });
                 std.debug.print("\n", .{});
             }
         }
@@ -80,7 +80,7 @@ pub fn HashMap(comptime K: type, comptime V: type, comptime Ctx: type) type {
 
             var it = self.map.iterator();
             while (it.next()) |entry| {
-                try writer.print("Key {s}, Value {}", .{entry.key_ptr.*, entry.value_ptr.*});
+                try writer.print("Key {s}, Value {}", .{ entry.key_ptr.*, entry.value_ptr.* });
                 try writer.print("\n", .{});
             }
             _ = buffer.pop();

@@ -74,7 +74,7 @@ pub fn AdjacencyMatrix(comptime T: type) type {
             for (0..self.size) |i| {
                 for (0..self.size) |j| {
                     const flag = self.matrix[i][j].flag;
-                    std.debug.print("{d} ", .{ @intFromBool(flag) });
+                    std.debug.print("{d} ", .{@intFromBool(flag)});
                 }
                 std.debug.print("\n", .{});
             }
@@ -88,7 +88,7 @@ pub fn AdjacencyMatrix(comptime T: type) type {
             for (0..self.size) |i| {
                 for (0..self.size) |j| {
                     const flag = self.matrix[i][j].flag;
-                    try writer.print("{d} ", .{ @intFromBool(flag) });
+                    try writer.print("{d} ", .{@intFromBool(flag)});
                 }
                 try writer.print("\n", .{});
             }
