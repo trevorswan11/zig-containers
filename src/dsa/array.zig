@@ -131,6 +131,16 @@ pub fn Array(comptime T: type) type {
         pub fn clear(self: *Self) void {
             self.len = 0;
         }
+
+        pub fn swap(self: *Self, i: usize, j: usize) !void {
+            if (i >= self.len or j >= self.len) {
+                return error.IndexOutOfBounds;
+            }
+
+            const tmp = self.arr[i];
+            self.arr[i] = self.arr[j];
+            self.arr[j] = tmp;
+        }
     };
 }
 
