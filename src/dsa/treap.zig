@@ -11,7 +11,7 @@ pub fn Treap(comptime T: type, comptime less: fn (a: T, b: T) bool, comptime eql
         set: hash_set(u64, void),
         allocator: std.mem.Allocator,
 
-        const Node = struct {
+        pub const Node = struct {
             key: T,
             priority: u64,
             left: ?*Node,
