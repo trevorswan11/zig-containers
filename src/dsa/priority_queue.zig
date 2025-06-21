@@ -116,6 +116,13 @@ pub fn PriorityQueue(comptime T: type, comptime less: fn (a: T, b: T) bool) type
                 .min_at_top => |*pq| pq.array.print(),
             }
         }
+
+        pub fn toString(self: *Self) ![]const u8 {
+            return blk: switch (self.impl) {
+                .max_at_top => |*pq| break :blk try pq.array.toString(),
+                .min_at_top => |*pq| break :blk try pq.array.toString(),
+            };
+        }
     };
 }
 

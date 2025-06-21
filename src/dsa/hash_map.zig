@@ -32,17 +32,6 @@ pub fn HashMap(comptime K: type, comptime V: type, comptime Ctx: type) type {
             };
         }
 
-        pub fn initContext(allocator: std.mem.Allocator, context: Ctx) !Self {
-            if (!@hasDecl(Ctx, "eql") or !@hasDecl(Ctx, "hash")) {
-                return error.MalformedHashContext;
-            }
-
-            return Self{
-                .map = MapType.initContext(allocator, context),
-                .allocator = allocator,
-            };
-        }
-
         pub fn deinit(self: *Self) void {
             self.map.deinit();
         }
@@ -74,6 +63,29 @@ pub fn HashMap(comptime K: type, comptime V: type, comptime Ctx: type) type {
 
         pub fn clear(self: *Self) void {
             self.map.clearRetainingCapacity();
+        }
+
+        pub fn print(self: *Self) void {
+            var it = self.map.iterator();
+            while (it.next()) |entry| {
+                std.debug.print("Key {}, Value {}", .{entry.key_ptr.*, entry.value_ptr.*});
+                std.debug.print("\n", .{});
+            }
+        }
+
+        pub fn toString(self: *Self) ![]const u8 {
+            var buffer = std.ArrayList(u8).init(self.allocator);
+            defer buffer.deinit();
+            const writer = buffer.writer();
+
+            var it = self.map.iterator();
+            while (it.next()) |entry| {
+                try writer.print("Key {s}, Value {}", .{entry.key_ptr.*, entry.value_ptr.*});
+                try writer.print("\n", .{});
+            }
+            _ = buffer.pop();
+
+            return try buffer.toOwnedSlice();
         }
     };
 }
@@ -187,7 +199,7 @@ const MyCtx = struct {
 };
 
 test "hash map with custom context" {
-    var map = try HashMap(u32, []const u8, MyCtx).initContext(std.testing.allocator, MyCtx{});
+    var map = try HashMap(u32, []const u8, MyCtx).init(std.testing.allocator);
     defer map.deinit();
 
     try map.put(123, "hello");

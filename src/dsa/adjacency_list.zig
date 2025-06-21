@@ -72,6 +72,24 @@ pub fn AdjacencyList(comptime T: type, Ctx: type) type {
                 std.debug.print("\n", .{});
             }
         }
+
+        pub fn toString(self: *Self) ![]const u8 {
+            var buffer = std.ArrayList(u8).init(self.allocator);
+            defer buffer.deinit();
+            const writer = buffer.writer();
+
+            var it = self.map.map.iterator();
+            while (it.next()) |entry| {
+                try writer.print("{}: ", .{entry.key_ptr.*});
+                for (entry.value_ptr.*.arr) |neighbor| {
+                    try writer.print("{} ", .{neighbor});
+                }
+                try writer.print("\n", .{});
+            }
+            _ = buffer.pop();
+
+            return try buffer.toOwnedSlice();
+        }
     };
 }
 

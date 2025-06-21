@@ -31,17 +31,6 @@ pub fn HashSet(comptime K: type, comptime Ctx: type) type {
             };
         }
 
-        pub fn initContext(allocator: std.mem.Allocator, context: Ctx) !Self {
-            if (!@hasDecl(Ctx, "eql") or !@hasDecl(Ctx, "hash")) {
-                return error.MalformedHashContext;
-            }
-
-            return Self{
-                .map = MapType.initContext(allocator, context),
-                .allocator = allocator,
-            };
-        }
-
         pub fn deinit(self: *Self) void {
             self.map.deinit();
         }
@@ -68,6 +57,29 @@ pub fn HashSet(comptime K: type, comptime Ctx: type) type {
 
         pub fn empty(self: *Self) bool {
             return self.size() == 0;
+        }
+
+        pub fn print(self: *Self) void {
+            var it = self.map.iterator();
+            while (it.next()) |entry| {
+                std.debug.print("Node {s}", .{entry.key_ptr.*});
+                std.debug.print("\n", .{});
+            }
+        }
+
+        pub fn toString(self: *Self) ![]const u8 {
+            var buffer = std.ArrayList(u8).init(self.allocator);
+            defer buffer.deinit();
+            const writer = buffer.writer();
+
+            var it = self.map.iterator();
+            while (it.next()) |entry| {
+                try writer.print("Node {s}", .{entry.key_ptr.*});
+                try writer.print("\n", .{});
+            }
+            _ = buffer.pop();
+
+            return try buffer.toOwnedSlice();
         }
     };
 }

@@ -101,7 +101,21 @@ pub fn Array(comptime T: type) type {
             std.debug.print(" ]", .{});
         }
 
-        pub fn toOwnedSlice(self: *Self) ![]T {
+        pub fn toString(self: *Self) ![]const u8 {
+            var buffer = std.ArrayList(u8).init(self.allocator);
+            defer buffer.deinit();
+            const writer = buffer.writer();
+
+            try writer.print("[", .{});
+            for (self.arr[0..self.len]) |value| {
+                try writer.print(" {}", .{value});
+            }
+            try writer.print(" ]", .{});
+
+            return try buffer.toOwnedSlice();
+        }
+
+        pub fn toSlice(self: *Self) ![]T {
             const slice = try self.allocator.alloc(T, self.len);
             for (self.arr[0..self.len], 0..) |value, i| {
                 slice[i] = value;

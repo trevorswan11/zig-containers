@@ -295,6 +295,22 @@ pub fn List(comptime T: type) type {
             std.debug.print(" -> null ]\n", .{});
         }
 
+        pub fn toString(self: *Self) ![]const u8 {
+            var buffer = std.ArrayList(u8).init(self.allocator);
+            defer buffer.deinit();
+            const writer = buffer.writer();
+
+            try writer.print("[ null", .{});
+            var current = self.head;
+            while (current) |node| {
+                try writer.print(" -> {}", .{node.value});
+                current = node.next;
+            }
+            try writer.print(" -> null ]\n", .{});
+
+            return try buffer.toOwnedSlice();
+        }
+
         /// Returns an iterator pointing to the head of the list
         pub fn begin(self: *Self) Iterator {
             return Iterator{ .current = self.head };

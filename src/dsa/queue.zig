@@ -33,6 +33,14 @@ pub fn Queue(comptime T: type) type {
         pub fn peek(self: *Self) ?T {
             return self.list.peekHead();
         }
+
+        pub fn print(self: *Self) void {
+            self.list.print();
+        }
+
+        pub fn toString(self: *Self) ![]const u8 {
+            return try self.list.toString();
+        }
     };
 }
 

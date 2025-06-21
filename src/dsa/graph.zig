@@ -65,6 +65,22 @@ pub fn Graph(comptime T: type, Ctx: type) type {
             }
         }
 
+        pub fn toString(self: *Self) ![]const u8 {
+            var buffer = std.ArrayList(u8).init(self.allocator);
+            defer buffer.deinit();
+            const writer = buffer.writer();
+
+            var it = self.adj_list.map.map.iterator();
+            while (it.next()) |entry| {
+                try writer.print("Node {}: ", .{entry.key_ptr.*});
+                entry.value_ptr.*.print();
+                try writer.print("\n", .{});
+            }
+            _ = buffer.pop();
+
+            return try buffer.toOwnedSlice();
+        }
+
         pub fn clear(self: *Self) void {
             self.adj_list.clear();
         }

@@ -3,7 +3,7 @@ const hash_set = @import("hash_set.zig").HashSet;
 
 const RANDOM_ITERATIONS = 20;
 
-pub fn Treap(comptime T: type, comptime less: fn (a: T, b: T) bool) type {
+pub fn Treap(comptime T: type, comptime less: fn (a: T, b: T) bool, comptime eql: fn (a: T, b: T) bool) type {
     return struct {
         const Self = @This();
 
@@ -129,7 +129,7 @@ pub fn Treap(comptime T: type, comptime less: fn (a: T, b: T) bool) type {
         pub fn contains(self: *Self, key: T) bool {
             var current = self.root;
             while (current) |node| {
-                if (key == node.key) {
+                if (eql(key, node.key)) {
                     return true;
                 }
                 if (less(key, node.key)) {
@@ -226,14 +226,14 @@ pub fn Treap(comptime T: type, comptime less: fn (a: T, b: T) bool) type {
             }
         }
 
-        pub fn printTree(self: *Self) void {
+        pub fn print(self: *Self) void {
             std.debug.print("\n", .{});
-            self.printTreeImpl(self.root, 0);
+            self.printImpl(self.root, 0);
         }
 
-        fn printTreeImpl(self: *Self, node: ?*Node, level: usize) void {
+        fn printImpl(self: *Self, node: ?*Node, level: usize) void {
             if (node) |n| {
-                self.printTreeImpl(n.right, level + 1);
+                self.printImpl(n.right, level + 1);
 
                 const temp = "    ";
                 const indentArray: []const []const u8 = &[_][]const u8{
@@ -246,10 +246,34 @@ pub fn Treap(comptime T: type, comptime less: fn (a: T, b: T) bool) type {
                 const indent = std.mem.join(self.allocator, "", indentArray) catch return;
                 std.debug.print("{s}key: {}, priority: {}\n", .{ indent, n.key, n.priority });
 
-                self.printTreeImpl(n.left, level + 1);
+                self.printImpl(n.left, level + 1);
             }
         }
+
+        pub fn preorder(self: *Self) ![]const u8 {
+            var buffer = std.ArrayList(u8).init(self.allocator);
+            defer buffer.deinit();
+            const writer = buffer.writer().any();
+            try self.preorderImpl(self.root, writer);
+            return buffer.toOwnedSlice();
+        }
+
+        fn preorderImpl(self: *Self, node: ?*Node, writer: std.io.AnyWriter) !void {
+            if (node) |n| {
+                try self.preorderImpl(n.left);
+                try writer.print("key: {}, priority: {}\n", .{ n.key, n.priority });
+                try self.preorderImpl(n.right);
+            }
+        }
+
+        pub fn toString(self: *Self) ![]const u8 {
+            return try preorder(self);
+        }
     };
+}
+
+fn eqlInt(a: i32, b: i32) bool {
+    return a == b;
 }
 
 fn lessThanInt(a: i32, b: i32) bool {
@@ -258,7 +282,7 @@ fn lessThanInt(a: i32, b: i32) bool {
 
 test "Treap insert and in-order traversal" {
     const allocator = std.heap.page_allocator;
-    var treap = Treap(i32, lessThanInt).init(allocator);
+    var treap = Treap(i32, lessThanInt, eqlInt).init(allocator);
     defer treap.deinit();
 
     try treap.insert(5);
@@ -270,7 +294,7 @@ test "Treap insert and in-order traversal" {
 
 test "Treap basic operations" {
     const allocator = std.heap.page_allocator;
-    var treap = Treap(i32, lessThanInt).init(allocator);
+    var treap = Treap(i32, lessThanInt, eqlInt).init(allocator);
     defer treap.deinit();
 
     // Insert
@@ -298,7 +322,7 @@ test "Treap basic operations" {
 
 test "Treap remove node and check integrity" {
     const allocator = std.heap.page_allocator;
-    var treap = Treap(i32, lessThanInt).init(allocator);
+    var treap = Treap(i32, lessThanInt, eqlInt).init(allocator);
     defer treap.deinit();
 
     try treap.insert(50);
@@ -323,7 +347,7 @@ test "Treap remove node and check integrity" {
 
 test "Treap clear and reuse" {
     const allocator = std.heap.page_allocator;
-    var treap = Treap(i32, lessThanInt).init(allocator);
+    var treap = Treap(i32, lessThanInt, eqlInt).init(allocator);
     defer treap.deinit();
 
     try treap.insert(100);
@@ -342,7 +366,7 @@ test "Treap clear and reuse" {
 
 test "Treap stress test: insert, contains, remove, size" {
     const allocator = std.heap.page_allocator;
-    var treap = Treap(i32, lessThanInt).init(allocator);
+    var treap = Treap(i32, lessThanInt, eqlInt).init(allocator);
     defer treap.deinit();
 
     const num_elements = 10_000;

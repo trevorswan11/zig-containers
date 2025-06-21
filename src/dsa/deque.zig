@@ -48,6 +48,14 @@ pub fn Deque(comptime T: type) type {
         pub fn peekTail(self: *Self) ?T {
             return self.list.peekTail();
         }
+
+        pub fn print(self: *Self) void {
+            self.list.print();
+        }
+
+        pub fn toString(self: *Self) ![]const u8 {
+            return try self.list.toString();
+        }
     };
 }
 
