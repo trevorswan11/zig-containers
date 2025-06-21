@@ -1,6 +1,6 @@
 const std = @import("std");
 const array = @import("array.zig").Array;
-const queue = @import("Queue.zig").Queue;
+const queue = @import("queue.zig").Queue;
 const hash_set = @import("hash_set.zig").HashSet;
 const adjacency_list = @import("adjacency_list.zig").AdjacencyList;
 
